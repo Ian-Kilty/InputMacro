@@ -1,8 +1,6 @@
 '''
 TODO
-requierments.txt
 clean up aka. speedup function
-add the rest of the controlling functions
 '''
 from pynput import mouse
 from pynput import keyboard
@@ -23,8 +21,6 @@ while 1:
             else:
                 break
         os.chdir("Data")
-        f = open(name + ".csv", "w", newline="")
-        f = csv.writer(f, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         input("Press enter to record in 3 seconds")
         print("1")
         time.sleep(1)
@@ -32,15 +28,20 @@ while 1:
         time.sleep(1)
         print("3")
         time.sleep(1)
-        print("Recording, press > to stop")
+        global starttime
+        starttime = time.time()
+        global count
+        count = 0
         def on_move(x, y):
-            f.writerow(["Move", (x, y)]) 
+            global starttime
+            f.writerow(["Move", (x, y), (time.time()-starttime)]) 
+            starttime = time.time()
 
         def on_click(x, y, button, pressed):
-            f.writerow(["{0}".format('MousePressed' if pressed else 'MouseReleased'), (x, y)])
+            f.writerow(["{0}".format('MousePressed' if pressed else 'MouseReleased'), (x, y), button])
 
         def on_scroll(x, y, dx, dy):
-            f.writerow(["{0}".format('down' if dy < 0 else 'up'), (x, y)])
+            f.writerow(["Scroll", (x, y), (dx, dy)])
         
         def on_press(key):
             try:
@@ -51,10 +52,11 @@ while 1:
         def on_release(key):
             try:
                 f.writerow(["KeyReleased", "{0}".format(key.char)])
-                if key.char == ">":
+                if key.char == "`":
                     mouseListener.stop()
                     keyboardListener.stop()
-                    print("\nStopped Recording")
+                    print("\nStopped Recording\nPress enter to procede")
+
             except AttributeError:
                 f.writerow(["KeyReleased", "{0}".format(key)])
 
@@ -65,8 +67,17 @@ while 1:
         keyboardListener = keyboard.Listener(
             on_press=on_press,
             on_release=on_release)
-        mouseListener.start()
-        keyboardListener.start()
+
+        with open(name + ".csv", "w", newline="") as f:
+            f = csv.writer(f, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            mouseListener.start()
+            keyboardListener.start()
+            starttime = time.time()
+            t = ""
+            while not t == "`":
+                t = input("Recording, press ` (in terminal window) to stop")
+                if t == "`":
+                    break
         os.chdir("..")
         
 
@@ -77,8 +88,15 @@ while 1:
                 print("Please pick a macro that exists")
             else:
                 break
+        timer = input("Timer (blank for none): ")
+        if timer == "":
+            timer = "0"
+        for i in range(int(timer), 0, -1):
+            print(i)
+            time.sleep(1)
         from pynput.keyboard import Key, Controller
         from pynput.mouse import Button, Controller
+        import pyautogui
         mouseController = Controller()
         keyboardController = Controller()
         os.chdir("Data")
@@ -86,7 +104,29 @@ while 1:
         f = csv.reader(f, delimiter=',')
         for row in f:
             if row[0] == "Move":
+                if row[2] != 0.0:
+                    print(row[2])
+                    time.sleep(float(row[2]))
                 mouseController.position = eval(row[1])
+            if row[0] == "MousePressed":
+                mouseController.position = eval(row[1])
+                pyautogui.mouseUp(button=row[2][7:])
+            if row[0] == "MouseReleased":
+                mouseController.position = eval(row[1])
+                pyautogui.mouseDown(button=row[2][7:])
+            if row[0] == "Scroll":
+                mouseController.position = eval(row[1])
+                mouseController.scroll(row[2][0], row[2][1])
+            if row[0] == "KeyPressed":
+                if len(row[1]) > 1:
+                    pyautogui.keyDown(row[1][4:])
+                else:
+                    pyautogui.keyDown(row[1])
+            if row[0] == "KeyReleased":
+                if len(row[1]) > 1:
+                    pyautogui.keyUp(row[1][4:])
+                else:
+                    pyautogui.keyUp(row[1])
         os.chdir("..")
 
     if input_ == "macros":
