@@ -2,6 +2,7 @@
 TODO
 clean up aka. speedup function
 '''
+from curses import noecho
 from pynput import mouse
 from pynput import keyboard
 import os
@@ -11,7 +12,7 @@ import csv
 import termcolor
 os.system('color')
 while 1:
-    input_ = input(termcolor.colored("=+ ", "red", 'on_grey', ['bold', 'blink']))
+    input_ = input(termcolor.colored("=+ ", "red"))
     if input_ == "new":
         name = input("Name: ")
         while 1:
@@ -33,12 +34,12 @@ while 1:
         global count
         count = 0
         def on_move(x, y):
-            global starttime
-            f.writerow(["Move", (x, y), (time.time()-starttime)]) 
-            starttime = time.time()
+            pass
 
         def on_click(x, y, button, pressed):
-            f.writerow(["{0}".format('MousePressed' if pressed else 'MouseReleased'), (x, y), button])
+            global starttime
+            f.writerow(["{0}".format('MousePressed' if pressed else 'MouseReleased'), (x, y), button, (time.time()-starttime)])
+            starttime = time.time()
 
         def on_scroll(x, y, dx, dy):
             f.writerow(["Scroll", (x, y), (dx, dy)])
@@ -100,33 +101,30 @@ while 1:
         mouseController = Controller()
         keyboardController = Controller()
         os.chdir("Data")
-        f = open(name + ".csv")
-        f = csv.reader(f, delimiter=',')
-        for row in f:
-            if row[0] == "Move":
-                if row[2] != 0.0:
-                    print(row[2])
-                    time.sleep(float(row[2]))
-                mouseController.position = eval(row[1])
-            if row[0] == "MousePressed":
-                mouseController.position = eval(row[1])
-                pyautogui.mouseUp(button=row[2][7:])
-            if row[0] == "MouseReleased":
-                mouseController.position = eval(row[1])
-                pyautogui.mouseDown(button=row[2][7:])
-            if row[0] == "Scroll":
-                mouseController.position = eval(row[1])
-                mouseController.scroll(row[2][0], row[2][1])
-            if row[0] == "KeyPressed":
-                if len(row[1]) > 1:
-                    pyautogui.keyDown(row[1][4:])
-                else:
-                    pyautogui.keyDown(row[1])
-            if row[0] == "KeyReleased":
-                if len(row[1]) > 1:
-                    pyautogui.keyUp(row[1][4:])
-                else:
-                    pyautogui.keyUp(row[1])
+        with open(name +".csv", "r", newline="") as f:
+            f = csv.reader(f, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            for row in f:
+                if row[0] == "MousePressed":
+                    time.sleep(float(row[3]))
+                    mouseController.position = eval(row[1])
+                    pyautogui.mouseUp(button=row[2][7:])
+                if row[0] == "MouseReleased":
+                    time.sleep(float(row[3]))
+                    mouseController.position = eval(row[1])
+                    pyautogui.mouseDown(button=row[2][7:])
+                if row[0] == "Scroll":
+                    mouseController.position = eval(row[1])
+                    mouseController.scroll(eval(row[2][0]), eval(row[2][1]))
+                if row[0] == "KeyPressed":
+                    if len(row[1]) > 1:
+                        pyautogui.keyDown(row[1][4:])
+                    else:
+                        pyautogui.keyDown(row[1])
+                if row[0] == "KeyReleased":
+                    if len(row[1]) > 1:
+                        pyautogui.keyUp(row[1][4:])
+                    else:
+                        pyautogui.keyUp(row[1])
         os.chdir("..")
 
     if input_ == "macros":
